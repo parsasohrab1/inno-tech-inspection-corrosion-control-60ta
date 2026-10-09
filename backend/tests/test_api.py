@@ -191,3 +191,23 @@ def test_soft_delete(client, tokens):
                                               "design_pressure_bar": 10, "design_temp_c": 100, "nominal_thickness_mm": 5, "min_required_thickness_mm": 6, "criticality": 3},
                       headers=H(tokens, "manager"))
     assert bad.status_code == 422
+
+
+def test_normalize_and_validate_tools():
+    import pandas as pd
+    from app.normalize import normalize
+    from app.validate import corrosion_validation, data_quality
+    df = pd.DataFrame({"asset": ["A", "A", "B"], "survey": ["S1", "S1", "S1"], "cml": [1, 1, 1],
+                       "date": ["05/01/2020", "05/01/2020", "bad"], "wt_in": [0.5, 0.5, 0.4]})
+    out, rep = normalize(df, {"kind": "thickness", "columns": {"asset": "equipment_id", "survey": "inspection_id", "cml": "point_id",
+                                                              "date": "measurement_date", "wt_in": "thickness_mm"},
+                              "units": {"thickness_mm": "in"}, "date_format": "%d/%m/%Y"})
+    assert len(out) == 1 and abs(out.thickness_mm.iloc[0] - 12.7) < 1e-6 and rep["dropped"]["duplicates"] == 1
+    from app.db import connect
+    c = connect()
+    eq = pd.read_sql_query("SELECT * FROM equipment", c)
+    th = pd.read_sql_query("SELECT equipment_id,inspection_id,point_id,measurement_date,thickness_mm FROM thickness_measurements", c)
+    c.close()
+    assert data_quality(eq, th)["equipment"] == len(eq)
+    v = corrosion_validation(eq, th)
+    assert v["n"] > 0 and v["beats_baseline"]

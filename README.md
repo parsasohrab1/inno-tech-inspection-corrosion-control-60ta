@@ -66,4 +66,13 @@ python -m pytest        # از ریشه پروژه
 ```
 معیارهای SRS روی داده مصنوعی (به‌صورت خودکار تست می‌شوند): Precision/Recall شناسایی و طبقه‌بندی ≥ ۰٫۸۵/۰٫۸۰ (کارت مدل در `/api/ndt/model-card`)، MAE پیش‌بینی ضخامت ≤ ۰٫۵ mm (`/api/predictions/metrics`)، برنامه بازرسی برای ۱۰۰٪ تجهیزات فعال/آماده، پاسخ دستیار < ۵ ثانیه، تحلیل سیگنال < ۵ ثانیه.
 
+## اعتبارسنجی با داده واقعی (مسیر TRL 5)
+```bash
+cd backend
+python -m app.normalize raw.csv mapping.json thickness.csv          # نگاشت ستون/واحد (CSV, Excel, JSON, SQL)
+python -m app.validate --equipment eq.csv --thickness thickness.csv --ndt ndt.csv --signals DIR
+python -m app.validate --demo                                        # خودآزمایی ابزار روی داده مصنوعی
+```
+خروجی `data/validation/validation.md|json` (کیفیت داده، MAE و پوشش بازه، مقایسه با خط پایه، Precision/Recall با برچسب کارشناس). بسته پایلوت: [docs/PILOT](docs/PILOT) (درخواست داده، قرارداد ستون‌ها، برگه ارزیابی کارشناسان).
+
 > **هشدار:** مدل‌ها روی داده مصنوعی آموزش دیده‌اند؛ پیش از استفاده عملیاتی باید با داده واقعی بازآموزی و اعتبارسنجی شوند (`ndt.train_model()`). تمام خروجی‌ها پیشنهادی هستند و تصمیم نهایی بازرسی بر عهده کارشناس ذی‌صلاح است. پیش از استقرار `SECRET_KEY` و گذرواژه‌های نمونه را تغییر دهید.
